@@ -10,7 +10,7 @@ import (
 )
 
 // Incremental synchronization session flow
-func incrSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
+func incrSyncSession(ctx context.Context, s *Options) (*State, error) {
 	syncDate := time.Now()
 
 	state := s.State
@@ -25,28 +25,28 @@ func incrSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
 
 	completed := false
 	for !completed {
-		changeToken, changes, err := incrSyncPage(ctx, ent, state.ChngToken, tillToken, s.EntConf, s.Upsert, s.Delete)
+		changeToken, changes, err := incrSyncPaged(ctx, ent, state.ChangeToken, tillToken, s.EntConf, s.Upsert, s.Delete)
 		if err != nil {
 			return state, err
 		}
-		state.ChngToken = changeToken
+		state.ChangeToken = changeToken
 		if changes == 0 {
 			completed = true
 		}
 	}
 
 	// Success completion state update
-	state.SkipToken = ""
+	state.PageToken = ""
 	state.Fails = 0
 	state.SyncDate = syncDate
-	state.ChngToken = tillToken
+	state.ChangeToken = tillToken
 	state.SyncStage = ""
 
 	return state, nil
 }
 
 // Change API paged responce processing
-func incrSyncPage(ctx context.Context, e *api.List, startToken string, endToken string, c *EntConf, upsert UpsertHandler, delete DeleteHandler) (string, int, error) {
+func incrSyncPaged(ctx context.Context, e *api.List, startToken string, endToken string, c *EntConf, up UpsertHandler, del DeleteHandler) (string, int, error) {
 	// Default 100 items per page is used for getting changes
 	// the page size increase is not recommended as change API returns only IDs
 	// and when IDs are used to construct requests to get specific items
@@ -91,7 +91,7 @@ func incrSyncPage(ctx context.Context, e *api.List, startToken string, endToken 
 			return startToken, changesCnt, err
 		}
 
-		if err := upsert(ctx, itemsToUpsert(items)); err != nil {
+		if err := up(ctx, itemsToUpsert(items)); err != nil {
 			return startToken, changesCnt, err
 		}
 	}
@@ -104,7 +104,7 @@ func incrSyncPage(ctx context.Context, e *api.List, startToken string, endToken 
 		}
 	}
 
-	if err := delete(ctx, deleteIds); err != nil {
+	if err := del(ctx, deleteIds); err != nil {
 		return startToken, changesCnt, err
 	}
 

@@ -1,7 +1,7 @@
 package spsync
 
 // Default page size of lists queries during full sync
-const pageSize = 1000
+const deafultPageSize = 1000
 
 // Required fields which are always added for EntConf.Select
 var requiredFields = []string{"Id", "AuthorId", "EditorId", "Created", "Modified"}
@@ -16,8 +16,8 @@ type EntConf struct {
 	Top int
 }
 
-// AbsItem abstract item structure
-type AbstItem struct {
+// ListItem abstract item structure
+type ListItem struct {
 	// SharePoint List item ID
 	ID int
 	// SharePoint List item metadata

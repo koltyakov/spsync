@@ -9,13 +9,13 @@ import (
 )
 
 // Full synchronization session flow
-func fullSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
+func fullSyncSession(ctx context.Context, s *Options) (*State, error) {
 	var syncDate time.Time
 	var chngToken string
 
 	state := s.State
 
-	isBlankSync := state.SkipToken == ""
+	isBlankSync := state.PageToken == ""
 
 	sp := s.SP
 	ent := sp.Web().GetList(s.State.EntID)
@@ -28,11 +28,11 @@ func fullSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
 			return state, err
 		}
 		chngToken = token
-		state.SyncMode = FullSync
+		state.SyncMode = Full
 	} else {
 		// For full sync continue sessions keep state values
 		syncDate = state.SyncDate
-		chngToken = state.ChngToken
+		chngToken = state.ChangeToken
 	}
 
 	// Sync stage dependent actions
@@ -41,11 +41,11 @@ func fullSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
 	if state.SyncStage == "Upsert" || state.SyncStage == "" {
 		completed := false
 		for !completed {
-			pageToken, err := fullSyncUpsert(ctx, ent, state.SkipToken, s.EntConf, s.Upsert)
+			pageToken, err := fullSyncUpsert(ctx, ent, state.PageToken, s.EntConf, s.Upsert)
 			if err != nil {
 				return state, err
 			}
-			state.SkipToken = pageToken
+			state.PageToken = pageToken
 			if pageToken == "" {
 				completed = true
 			}
@@ -62,49 +62,49 @@ func fullSyncSession(ctx context.Context, s *SyncOptns) (*SyncState, error) {
 	}
 
 	// Success completion state update
-	state.SkipToken = ""
+	state.PageToken = ""
 	state.Fails = 0
 	state.SyncDate = syncDate
-	state.ChngToken = chngToken
+	state.ChangeToken = chngToken
 	state.SyncStage = ""
 
 	return state, nil
 }
 
 // Upserts processing flow
-func fullSyncUpsert(ctx context.Context, e *api.List, pageToken string, c *EntConf, upsert UpsertHandler) (string, error) {
-	top := pageSize
+func fullSyncUpsert(ctx context.Context, e *api.List, token string, c *EntConf, up UpsertHandler) (string, error) {
+	top := deafultPageSize
 	if c.Top > 0 {
 		top = c.Top
 	}
 
 	query := e.Items().Conf(api.HeadersPresets.Minimalmetadata).Top(top)
-	if pageToken != "" {
-		query = query.Skip(pageToken)
+	if token != "" {
+		query = query.Skip(token)
 	}
 	query = appendOData(query, c)
 
 	items, err := query.Get()
 	if err != nil {
-		return pageToken, err
+		return token, err
 	}
 
-	if err := upsert(ctx, itemsToUpsert(items)); err != nil {
-		return pageToken, err
+	if err := up(ctx, itemsToUpsert(items)); err != nil {
+		return token, err
 	}
 
 	u, err := url.Parse(items.NextPageURL())
 	if err != nil {
-		return pageToken, err
+		return token, err
 	}
 
-	pageToken = u.Query().Get("$skiptoken")
+	token = u.Query().Get("$skiptoken")
 
-	return pageToken, nil
+	return token, nil
 }
 
 // Deletions processing flow
-func fullSyncDelete(ctx context.Context, e *api.List, c *EntConf, delete DeleteHandler) error {
+func fullSyncDelete(ctx context.Context, e *api.List, c *EntConf, del DeleteHandler) error {
 	items, err := e.Items().Conf(api.HeadersPresets.Minimalmetadata).Select("Id").Top(5000).GetAll()
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func fullSyncDelete(ctx context.Context, e *api.List, c *EntConf, delete DeleteH
 		prevID = currID
 	}
 
-	if err := delete(ctx, ids); err != nil {
+	if err := del(ctx, ids); err != nil {
 		return err
 	}
 

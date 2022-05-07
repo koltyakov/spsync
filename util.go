@@ -21,10 +21,10 @@ func appendOData(query *api.Items, conf *EntConf) *api.Items {
 	return query
 }
 
-func itemsToUpsert(items api.ItemsResp) []AbstItem {
-	var toUpsert []AbstItem
+func itemsToUpsert(items api.ItemsResp) []ListItem {
+	var toUpsert []ListItem
 	for _, item := range items.Data() {
-		toUpsert = append(toUpsert, AbstItem{
+		toUpsert = append(toUpsert, ListItem{
 			ID:   item.Data().ID,
 			Data: cleanMap(item.ToMap(), []string{"ID", "odata.id", "odata.editLink", "odata.type"}),
 		})
