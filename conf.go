@@ -1,5 +1,7 @@
 package spsync
 
+import "time"
+
 // Default page size of lists queries during full sync
 const deafultPageSize = 1000
 
@@ -20,6 +22,16 @@ type EntConf struct {
 type ListItem struct {
 	// SharePoint List item ID
 	ID int
+	// Author user ID
+	AuthorID int
+	// Created at timestamp
+	Created time.Time
+	// Editor user ID
+	EditorID int
+	// Modified at timestamp
+	Modified time.Time
+	// Item version
+	Version int
 	// SharePoint List item metadata
 	Data map[string]interface{}
 }

@@ -1,6 +1,7 @@
 package spsync
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/koltyakov/gosip/api"
@@ -24,9 +25,17 @@ func appendOData(query *api.Items, conf *EntConf) *api.Items {
 func itemsToUpsert(items api.ItemsResp) []ListItem {
 	var toUpsert []ListItem
 	for _, item := range items.Data() {
+		d := item.Data()
+		m := item.ToMap()
+		version, _ := strconv.Atoi(m["odata.etag"].(string))
 		toUpsert = append(toUpsert, ListItem{
-			ID:   item.Data().ID,
-			Data: cleanMap(item.ToMap(), []string{"ID", "odata.id", "odata.editLink", "odata.type"}),
+			ID:       d.ID,
+			AuthorID: d.AuthorID,
+			EditorID: d.EditorID,
+			Created:  d.Created,
+			Modified: d.Modified,
+			Version:  version,
+			Data:     cleanMap(item.ToMap(), []string{"ID", "odata.id", "odata.editLink", "odata.type", "odata.etag"}),
 		})
 	}
 	return toUpsert
