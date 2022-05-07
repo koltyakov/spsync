@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// Load environment variables needed for sync processing
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	ctx := context.Background()
 
