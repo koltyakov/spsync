@@ -67,6 +67,7 @@ func fullSyncSession(ctx context.Context, s *Options) (*State, error) {
 	state.SyncDate = syncDate
 	state.ChangeToken = chngToken
 	state.SyncStage = ""
+	state.SyncMode = Incr
 
 	return state, nil
 }
