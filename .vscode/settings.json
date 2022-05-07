@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "**/.idea": true,
+    "**/.vscode": true,
+    "**/bin/": true,
+    "**/tmp/": true
+  },
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true
+}
