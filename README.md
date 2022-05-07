@@ -103,20 +103,22 @@ func main() {
 	ctx := context.Background()
 
 	// Setup sync configuration per a specific entity.
-	// Usually you need to sync multiple Lists so most of a logic from this sample iterates for synced entities.
-	// In a serverless scenarios, sync session timeout is controlled and terminated by the caller after timeout. It's OK,
-	// the resumed session is designed to continue since a previous successful incremental state.
+	// Usually you need to sync multiple Lists so most of a logic from this sample
+	// iterates for synced entities.
+	// In a serverless scenarios, sync session timeout is controlled and terminated
+	// by the caller after timeout. It's OK, the resumed session is designed
+	// to continue since a previous successful incremental state.
 
 	opts := &spsync.SyncOptns{
 		// Create and bind SharePoint API client, see more https://go.spflow.com
 		SP: NewSP(),
-		// Pass current state configuration from a persistent storage (e.g. database or SharePoint list)
+		// Pass current state from a persistent storage (e.g. database or SharePoint list)
 		State: &spsync.SyncState{
 			EntID:     "Lists/SPFTSheetsTimeEntries",
-			ChngToken: "1;3;b9904727-dd73-4459-8149-28764ff86db9;637874554928300000;347735073",
+			ChngToken: "1;3;b9904727-dd73-4459-8149...37874554928300000;347735073",
 			SyncMode:  spsync.IncrSync,
 		},
-		// Pass sync configuration for a specific entity, usually retrieved from a utility config file
+		// Pass configuration for a specific entity, usually stored in config file
 		EntConf: &spsync.EntConf{
 			Select: []string{"Id", "Title"},
 		},
@@ -149,8 +151,9 @@ func main() {
 
 	// Save the updated entity sync state to a persistent storage.
 	// The state is used to resume sync session from a previous state.
-	// Even when a sync session ended up with errors we need to save it. Some scenarious, e.g. sync in serverless jobs
-	// might be designed to wrap up in 10-15 minutes and resume on a next run.
+	// Even when a sync session ended up with errors we need to save it.
+	// Some scenarious, e.g. sync in serverless jobs might be designed
+	// to terminate in 10-15 minutes and resume on a next run.
 
 	fmt.Printf("State %+v\n", state)
 }
