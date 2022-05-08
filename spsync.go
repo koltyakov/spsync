@@ -19,7 +19,7 @@ type Options struct {
 	Upsert  UpsertHandler
 	Delete  DeleteHandler
 	Events  *Events
-	Persist func(s *State) error
+	Persist func(s *State)
 }
 
 // Run executes sync session per entity
@@ -68,9 +68,7 @@ func ensureOptions(o *Options) (*Options, error) {
 		// so paged content state is persisted in case of error
 		// and next start continues from last saved step
 		fmt.Println("WARN: persist handler is not provided, state won't be saved incrementally")
-		o.Persist = func(s *State) error {
-			return nil
-		}
+		o.Persist = func(s *State) {}
 	}
 
 	// Populates empty events if not provided
