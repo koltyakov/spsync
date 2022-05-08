@@ -13,7 +13,7 @@ It is designed to run as a scheduled job within serverless scenarios. The increm
 
 In a scheduler mode, let's assume the Azure Functions timer job, after single or multiple executions (which could be terminated with a timeout) full sync is completed, then incremental mode is effectively catching up with only changed items in seconds.
 
-Here is the design and core principles of how it works.
+Here are the design and core principles of how it works.
 
 ## Entity sync metadata persistent state
 

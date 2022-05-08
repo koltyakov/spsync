@@ -67,8 +67,8 @@ func ensureOptions(o *Options) (*Options, error) {
 		// Persisting state incrementally is recommended
 		// so paged content state is persisted in case of error
 		// and next start continues from last saved step
+		fmt.Println("WARN: persist handler is not provided, state won't be saved incrementally")
 		o.Persist = func(s *State) error {
-			fmt.Println("WARN: persist handler is not provided, state won't be saved incrementally")
 			return nil
 		}
 	}
