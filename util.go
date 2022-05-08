@@ -7,31 +7,31 @@ import (
 	"github.com/koltyakov/gosip/api"
 )
 
-func appendOData(query *api.Items, conf *EntConf) *api.Items {
-	if conf.Select != nil && len(conf.Select) > 0 {
+// Applies entity OData configuration
+func appendOData(items *api.Items, ent *Ent) *api.Items {
+	if ent.Select != nil && len(ent.Select) > 0 {
 		for _, field := range requiredFields {
-			if !contains(conf.Select, field) {
-				conf.Select = append(conf.Select, field)
+			if !contains(ent.Select, field) {
+				ent.Select = append(ent.Select, field)
 			}
 		}
-		query = query.Select(strings.Join(conf.Select, ","))
+		items = items.Select(strings.Join(ent.Select, ","))
 	}
-	if conf.Expand != nil && len(conf.Expand) > 0 {
-		query = query.Expand(strings.Join(conf.Expand, ","))
+	if ent.Expand != nil && len(ent.Expand) > 0 {
+		items = items.Expand(strings.Join(ent.Expand, ","))
 	}
-	return query
+	return items
 }
 
-func itemsToUpsert(items api.ItemsResp) []ListItem {
-	var toUpsert []ListItem
+// Converts API items response to abstract sync items struct
+func itemsToUpsert(items api.ItemsResp) []Item {
+	var toUpsert []Item
 	for _, item := range items.Data() {
 		d := item.Data()
 		m := item.ToMap()
 		version, _ := strconv.Atoi(m["odata.etag"].(string))
-		toUpsert = append(toUpsert, ListItem{
+		toUpsert = append(toUpsert, Item{
 			ID:       d.ID,
-			AuthorID: d.AuthorID,
-			EditorID: d.EditorID,
 			Created:  d.Created,
 			Modified: d.Modified,
 			Version:  version,
@@ -41,6 +41,7 @@ func itemsToUpsert(items api.ItemsResp) []ListItem {
 	return toUpsert
 }
 
+// Checks if a slice contains a string
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -50,6 +51,7 @@ func contains(s []string, e string) bool {
 	return false
 }
 
+// Removes provided props from a map
 func cleanMap(m map[string]interface{}, clean []string) map[string]interface{} {
 	for _, field := range clean {
 		delete(m, field)

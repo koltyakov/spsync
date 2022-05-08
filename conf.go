@@ -3,13 +3,13 @@ package spsync
 import "time"
 
 // Default page size of lists queries during full sync
-const deafultPageSize = 1000
+const defaultPageSize = 1000
 
 // Required fields which are always added for EntConf.Select
-var requiredFields = []string{"Id", "AuthorId", "EditorId", "Created", "Modified"}
+var requiredFields = []string{"Id", "Created", "Modified"}
 
-// EntConf List entity configuration
-type EntConf struct {
+// Ent List entity configuration
+type Ent struct {
 	// OData fields to select from a list
 	Select []string
 	// OData props to expand in a list
@@ -18,16 +18,12 @@ type EntConf struct {
 	Top int
 }
 
-// ListItem abstract item structure
-type ListItem struct {
+// Item abstract item structure
+type Item struct {
 	// SharePoint List item ID
 	ID int
-	// Author user ID
-	AuthorID int
 	// Created at timestamp
 	Created time.Time
-	// Editor user ID
-	EditorID int
 	// Modified at timestamp
 	Modified time.Time
 	// Item version

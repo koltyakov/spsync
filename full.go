@@ -9,104 +9,111 @@ import (
 )
 
 // Full synchronization session flow
-func fullSyncSession(ctx context.Context, s *Options) (*State, error) {
-	var syncDate time.Time
-	var chngToken string
+func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
+	var syncStart time.Time
+	var changeToken string
 
-	state := s.State
+	isBlankSync := o.State.PageToken == ""
 
-	isBlankSync := state.PageToken == ""
+	o.Events.FullSyncStarted(o.State.EntID, isBlankSync)
 
-	sp := s.SP
-	ent := sp.Web().GetList(s.State.EntID)
+	sp := o.SP
+	l := sp.Web().GetList(o.State.EntID)
 
 	// Save current change token and timestamp for new blank sync
 	if isBlankSync {
-		syncDate = time.Now()
-		token, err := ent.Changes().GetCurrentToken()
+		syncStart = time.Now()
+		token, err := l.Changes().GetCurrentToken()
 		if err != nil {
-			return state, err
+			return o.State, err
 		}
-		chngToken = token
-		state.SyncMode = Full
+		changeToken = token
+		o.State.SyncMode = Full
 	} else {
 		// For full sync continue sessions keep state values
-		syncDate = state.SyncDate
-		chngToken = state.ChangeToken
+		syncStart = o.State.SyncDate
+		changeToken = o.State.ChangeToken
 	}
 
 	// Sync stage dependent actions
 
 	// Getting upsert changes
-	if state.SyncStage == "Upsert" || state.SyncStage == "" {
-		completed := false
-		for !completed {
-			pageToken, err := fullSyncUpsert(ctx, ent, state.PageToken, s.EntConf, s.Upsert)
+	if o.State.SyncStage == "Upsert" || o.State.SyncStage == "" {
+		done := false
+		for !done {
+			pageToken, err := fullSyncUpsert(ctx, l, o)
 			if err != nil {
-				return state, err
+				return o.State, err
 			}
-			state.PageToken = pageToken
+			o.State.PageToken = pageToken
+			o.Persist(o.State)
 			if pageToken == "" {
-				completed = true
+				done = true
 			}
 		}
 
-		state.SyncStage = "Delete"
+		o.State.SyncStage = "Delete"
+		o.Persist(o.State)
 	}
 
 	// Getting delete changes
-	if state.SyncStage == "Delete" {
-		if err := fullSyncDelete(ctx, ent, s.EntConf, s.Delete); err != nil {
-			return state, err
+	if o.State.SyncStage == "Delete" {
+		if err := fullSyncDelete(ctx, l, o); err != nil {
+			return o.State, err
 		}
 	}
 
 	// Success completion state update
-	state.PageToken = ""
-	state.Fails = 0
-	state.SyncDate = syncDate
-	state.ChangeToken = chngToken
-	state.SyncStage = ""
-	state.SyncMode = Incr
+	o.State.PageToken = ""
+	o.State.Fails = 0
+	o.State.SyncDate = syncStart
+	o.State.ChangeToken = changeToken
+	o.State.SyncStage = ""
+	o.State.SyncMode = Incr
 
-	return state, nil
+	o.Events.FullSyncCompleted(o.State.EntID, isBlankSync)
+	o.Persist(o.State)
+
+	return o.State, nil
 }
 
 // Upserts processing flow
-func fullSyncUpsert(ctx context.Context, e *api.List, token string, c *EntConf, up UpsertHandler) (string, error) {
-	top := deafultPageSize
-	if c.Top > 0 {
-		top = c.Top
+func fullSyncUpsert(ctx context.Context, l *api.List, o *Options) (string, error) {
+	top := defaultPageSize
+	if o.Ent.Top > 0 {
+		top = o.Ent.Top
 	}
 
-	query := e.Items().Conf(api.HeadersPresets.Minimalmetadata).Top(top)
-	if token != "" {
-		query = query.Skip(token)
+	query := l.Items().Conf(api.HeadersPresets.Minimalmetadata).Top(top)
+	if o.State.PageToken != "" {
+		query = query.Skip(o.State.PageToken)
 	}
-	query = appendOData(query, c)
+	query = appendOData(query, o.Ent)
+
+	o.Events.FullSyncRequest(o.State.EntID, query.ToURL())
 
 	items, err := query.Get()
 	if err != nil {
-		return token, err
+		return o.State.PageToken, err
 	}
 
-	if err := up(ctx, itemsToUpsert(items)); err != nil {
-		return token, err
+	if err := o.Upsert(ctx, itemsToUpsert(items)); err != nil {
+		return o.State.PageToken, err
 	}
 
 	u, err := url.Parse(items.NextPageURL())
 	if err != nil {
-		return token, err
+		return o.State.PageToken, err
 	}
 
-	token = u.Query().Get("$skiptoken")
+	token := u.Query().Get("$skiptoken")
 
 	return token, nil
 }
 
 // Deletions processing flow
-func fullSyncDelete(ctx context.Context, e *api.List, c *EntConf, del DeleteHandler) error {
-	items, err := e.Items().Conf(api.HeadersPresets.Minimalmetadata).Select("Id").Top(5000).GetAll()
+func fullSyncDelete(ctx context.Context, l *api.List, o *Options) error {
+	items, err := l.Items().Conf(api.HeadersPresets.Minimalmetadata).Select("Id").Top(5000).GetAll()
 	if err != nil {
 		return err
 	}
@@ -121,7 +128,7 @@ func fullSyncDelete(ctx context.Context, e *api.List, c *EntConf, del DeleteHand
 		prevID = currID
 	}
 
-	if err := del(ctx, ids); err != nil {
+	if err := o.Delete(ctx, ids); err != nil {
 		return err
 	}
 

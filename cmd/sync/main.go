@@ -31,16 +31,16 @@ func main() {
 		SP: NewSP(),
 		// Pass current state from a persistent storage (e.g. database or SharePoint list)
 		State: &spsync.State{
-			EntID:       "Lists/SPFTSheetsTimeEntries",
-			ChangeToken: "1;3;b9904727-dd73-4459-8149...37874554928300000;347735073",
-			SyncMode:    spsync.Incr,
+			EntID: "Lists/SPFTSheetsTimeEntries",
+			// ChangeToken: "1;3;b9904727-dd73-4459-8149...37874554928300000;347735073",
+			SyncMode: spsync.Full,
 		},
 		// Pass configuration for a specific entity, usually stored in config file
-		EntConf: &spsync.EntConf{
+		Ent: &spsync.Ent{
 			Select: []string{"Id", "Title"},
 		},
 		// Provide a handler to deal with created and updated items
-		Upsert: func(ctx context.Context, items []spsync.ListItem) error {
+		Upsert: func(ctx context.Context, items []spsync.Item) error {
 			// Implement your logic here for your target system:
 			// Bulk create or update if a target system supports batch processing
 			// alternatively, check if an item's Id exists and update otherwise create

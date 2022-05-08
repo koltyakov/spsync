@@ -10,48 +10,54 @@ import (
 )
 
 // Incremental synchronization session flow
-func incrSyncSession(ctx context.Context, s *Options) (*State, error) {
+func incrSyncSession(ctx context.Context, o *Options) (*State, error) {
 	syncDate := time.Now()
 
-	state := s.State
+	o.Events.IncrSyncStarted(o.State.EntID)
 
-	sp := s.SP
-	ent := sp.Web().GetList(s.State.EntID)
+	sp := o.SP
+	ent := sp.Web().GetList(o.State.EntID)
 
 	tillToken, err := ent.Changes().GetCurrentToken()
 	if err != nil {
-		return state, err
+		return o.State, err
 	}
 
 	completed := false
 	for !completed {
-		changeToken, changes, err := incrSyncPaged(ctx, ent, state.ChangeToken, tillToken, s.EntConf, s.Upsert, s.Delete)
+		changeToken, changes, err := incrSyncPaged(ctx, ent, tillToken, o)
 		if err != nil {
-			return state, err
+			return o.State, err
 		}
-		state.ChangeToken = changeToken
+		o.State.ChangeToken = changeToken
+		o.Persist(o.State)
 		if changes == 0 {
 			completed = true
 		}
 	}
 
 	// Success completion state update
-	state.PageToken = ""
-	state.Fails = 0
-	state.SyncDate = syncDate
-	state.ChangeToken = tillToken
-	state.SyncStage = ""
+	o.State.PageToken = ""
+	o.State.Fails = 0
+	o.State.SyncDate = syncDate
+	o.State.ChangeToken = tillToken
+	o.State.SyncStage = ""
 
-	return state, nil
+	o.Events.IncrSyncCompleted(o.State.EntID)
+	o.Persist(o.State)
+
+	return o.State, nil
 }
 
 // Change API paged responce processing
-func incrSyncPaged(ctx context.Context, e *api.List, startToken string, endToken string, c *EntConf, up UpsertHandler, del DeleteHandler) (string, int, error) {
+func incrSyncPaged(ctx context.Context, l *api.List, endToken string, o *Options) (string, int, error) {
+	o.Events.IncrSyncRequest(o.State.EntID, o.State.ChangeToken, endToken)
+
 	// Default 100 items per page is used for getting changes
 	// the page size increase is not recommended as change API returns only IDs
 	// and when IDs are used to construct requests to get specific items
-	changes, _ := e.Changes().Top(100).GetChanges(&api.ChangeQuery{
-		ChangeTokenStart: startToken,
+	changes, _ := l.Changes().Top(100).GetChanges(&api.ChangeQuery{
+		ChangeTokenStart: o.State.ChangeToken,
 		ChangeTokenEnd:   endToken,
 		Item:             true,
 		Restore:          true,
@@ -78,8 +84,8 @@ func incrSyncPaged(ctx context.Context, e *api.List, startToken string, endToken
 	}
 
 	if len(upsertIds) > 0 {
-		query := e.Items().Conf(api.HeadersPresets.Minimalmetadata).Top(len(upsertIds))
-		query = appendOData(query, c)
+		query := l.Items().Conf(api.HeadersPresets.Minimalmetadata).Top(len(upsertIds))
+		query = appendOData(query, o.Ent)
 
 		var filters []string
 		for _, id := range upsertIds {
@@ -88,11 +94,11 @@ func incrSyncPaged(ctx context.Context, e *api.List, startToken string, endToken
 
 		items, err := query.Filter(strings.Join(filters, " or ")).Get()
 		if err != nil {
-			return startToken, changesCnt, err
+			return o.State.ChangeToken, changesCnt, err
 		}
 
-		if err := up(ctx, itemsToUpsert(items)); err != nil {
-			return startToken, changesCnt, err
+		if err := o.Upsert(ctx, itemsToUpsert(items)); err != nil {
+			return o.State.ChangeToken, changesCnt, err
 		}
 	}
 
@@ -104,8 +110,8 @@ func incrSyncPaged(ctx context.Context, e *api.List, startToken string, endToken
 		}
 	}
 
-	if err := del(ctx, deleteIds); err != nil {
-		return startToken, changesCnt, err
+	if err := o.Delete(ctx, deleteIds); err != nil {
+		return o.State.ChangeToken, changesCnt, err
 	}
 
 	return changes.Data()[changesCnt-1].ChangeToken.StringValue, changesCnt, nil
