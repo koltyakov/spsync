@@ -7,6 +7,14 @@
   <img alt="Gosip" src="https://raw.githubusercontent.com/koltyakov/gosip-docs/master/.gitbook/assets/gosip.png" />
 </div>
 
+The library implements optimal synchronization of SharePoint Lists taking care of pagination, large lists thresholds, incremental sync via changes API, deletion and items restore tracking, and more.
+
+It is designed to run as a scheduled job within serverless scenarios. The incremental mode could be adapted for Webhooks signals.
+
+In a scheduler mode, let's assume the Azure Functions timer job, after single or multiple executions (which could be terminated with a timeout) full sync is completed, then incremental mode is effectively catching up with only changed items in seconds.
+
+Here the design and core principles how it works.
+
 ## Entity sync metadata persistent state
 
 | Entity     | Change Token  | Page Token           | Mode | Stage  | Sync Date | Failed Sessions |
