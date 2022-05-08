@@ -28,11 +28,11 @@ func main() {
 
 	opts := &spsync.Options{
 		// Create and bind SharePoint API client, see more https://go.spflow.com
+		// For multiple entities sync initiate the client externally
 		SP: NewSP(),
 		// Pass current state from a persistent storage (e.g. database or SharePoint list)
 		State: &spsync.State{
-			EntID: "Lists/SPFTSheetsTimeEntries",
-			// ChangeToken: "1;3;b9904727-dd73-4459-8149...37874554928300000;347735073",
+			EntID:    "Lists/MyList",
 			SyncMode: spsync.Full,
 		},
 		// Pass configuration for a specific entity, usually stored in config file
@@ -44,9 +44,7 @@ func main() {
 			// Implement your logic here for your target system:
 			// Bulk create or update if a target system supports batch processing
 			// alternatively, check if an item's Id exists and update otherwise create
-			for _, item := range items {
-				fmt.Printf("Upsert %+v\n", item.Data)
-			}
+			fmt.Printf("Upsert %d items\n", len(items))
 			return nil
 		},
 		// Provide a handler to deal with deleted items
@@ -54,25 +52,28 @@ func main() {
 			// Implement your logic here for your target system:
 			// Bulk delete if a target system supports batch processing
 			// alternatively, delete item by Id and ignore NotFound error types
-			fmt.Printf("Deletes %+v\n", ids)
+			fmt.Printf("Delete %d items\n", len(ids))
 			return nil
 		},
+		// Save the updated entity sync state to a persistent storage
+		Persist: func(s *spsync.State) error {
+			// The state is used to resume sync session from a previous state.
+			// Even when a sync session ended up with errors we need to save it.
+			// Some scenarious, e.g. sync in serverless jobs might be designed
+			// to terminate in 10-15 minutes and resume on a next run.
+			return nil
+		},
+		// Hook to sync events and use logging middleware of your choice
+		Events: &spsync.Events{},
 	}
 
 	// Run sync session
 	state, err := spsync.Run(ctx, opts)
 	if err != nil {
 		state.Fails += 1
+		// Persist state here as well
 		fmt.Println(err)
 	}
-
-	// Save the updated entity sync state to a persistent storage.
-	// The state is used to resume sync session from a previous state.
-	// Even when a sync session ended up with errors we need to save it.
-	// Some scenarious, e.g. sync in serverless jobs might be designed
-	// to terminate in 10-15 minutes and resume on a next run.
-
-	fmt.Printf("State %+v\n", state)
 }
 
 // NewSP constructs SharePoint authenticated API client instance
