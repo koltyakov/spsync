@@ -43,7 +43,7 @@ func incrSyncSession(ctx context.Context, o *Options) (*State, error) {
 	o.State.ChangeToken = tillToken
 	o.State.SyncStage = ""
 
-	o.Events.IncrSyncCompleted(o.State.EntID)
+	o.Events.IncrSyncFinished(o.State.EntID)
 	o.Persist(o.State)
 
 	return o.State, nil

@@ -71,7 +71,7 @@ func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
 	o.State.SyncStage = ""
 	o.State.SyncMode = Incr
 
-	o.Events.FullSyncCompleted(o.State.EntID, isBlankSync)
+	o.Events.FullSyncFinished(o.State.EntID, isBlankSync)
 	o.Persist(o.State)
 
 	return o.State, nil
