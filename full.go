@@ -11,7 +11,6 @@ import (
 // Full synchronization session flow
 func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
 	var syncStart time.Time
-	var changeToken string
 
 	isBlankSync := o.State.PageToken == ""
 
@@ -27,13 +26,11 @@ func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
 		if err != nil {
 			return o.State, err
 		}
-		changeToken = token
-		o.State.ChangeToken = changeToken
+		o.State.ChangeToken = token
 		o.State.SyncMode = Full
 	} else {
 		// For full sync continue sessions keep state values
 		syncStart = o.State.SyncDate
-		changeToken = o.State.ChangeToken
 	}
 
 	// Sync stage dependent actions
@@ -68,7 +65,6 @@ func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
 	o.State.PageToken = ""
 	o.State.Fails = 0
 	o.State.SyncDate = syncStart
-	o.State.ChangeToken = changeToken
 	o.State.SyncStage = ""
 	o.State.SyncMode = Incr
 
