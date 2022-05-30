@@ -28,6 +28,7 @@ func fullSyncSession(ctx context.Context, o *Options) (*State, error) {
 			return o.State, err
 		}
 		changeToken = token
+		o.State.ChangeToken = changeToken
 		o.State.SyncMode = Full
 	} else {
 		// For full sync continue sessions keep state values
