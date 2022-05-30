@@ -118,12 +118,14 @@ func fullSyncDelete(ctx context.Context, l *api.List, o *Options) error {
 		return err
 	}
 
+	// Find all missed IDs in items sequence
 	var ids []int
 	prevID := 0
 	for _, item := range items {
 		currID := item.Data().ID
-		if prevID+1 != currID {
-			ids = append(ids, currID)
+		for prevID+1 != currID {
+			ids = append(ids, prevID+1)
+			prevID++
 		}
 		prevID = currID
 	}
