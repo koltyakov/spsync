@@ -189,3 +189,5 @@ func NewSP() *api.SP {
 	return api.NewSP(client)
 }
 ```
+
+Powered by [gosip](https://github.com/koltyakov/gosip).
