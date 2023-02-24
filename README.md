@@ -171,7 +171,7 @@ func main() {
 func NewSP() *api.SP {
 	// Simplest strategy for testing
 	// for prod the AzureAD auth is recommended:
-	// https://go.spflow.com/auth/custom-auth/azure-certificate-auth
+	// https://go.spflow.com/auth/strategies/azure-certificate-auth
 
 	// Create .env with the following variables: SP_SITE_URL, SP_USERNAME, SP_PASSWORD
 	// or export the variables in your shell
