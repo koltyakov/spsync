@@ -147,12 +147,11 @@ func main() {
 			return nil
 		},
 		// Save the updated entity sync state to a persistent storage
-		Persist: func(s *spsync.State) error {
+		Persist: func(s *spsync.State) {
 			// The state is used to resume sync session from a previous state.
 			// Even when a sync session ended up with errors we need to save it.
 			// Some scenarious, e.g. sync in serverless jobs might be designed
 			// to terminate in 10-15 minutes and resume on a next run.
-			return nil
 		},
 		// Hook to sync events and use logging middleware of your choice
 		Events: &spsync.Events{},
